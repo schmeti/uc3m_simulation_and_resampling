@@ -1,0 +1,184 @@
+---
+title: "Excercises_Class2_Marcos_Raul_Simon"
+output: pdf_document
+date: "2025-02-05"
+---
+
+```{r setup, include=F}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# R Code from the Second Class by
+- Raul Rodriguez Garcia
+- Marcos Álvarez Martín
+- Simon Schmetz
+
+
+# Excercise 1: Integrals
+
+```{r}
+#install.packages("cubature")
+library(cubature)
+
+# function
+f <- function(x) {
+  (2/3) * (x[1] + x[2] + x[3])
+}
+
+#limits
+lower <- c(0, 0, 0)
+upper <- c(0.5, 0.5, 0.5)
+
+# integrate
+adaptIntegrate(f, lower, upper)
+
+```
+# Excercise 2: Simulation of a Random Variable (DeepSeek)
+
+In the following Chapter we compare two versions of a algorithm to simulate a random variable.
+
+## V1
+
+```{r}
+sim_disc3_V1 <- function(MC) {
+  # Initialize a vector of length MC with default value 3
+  sim_disc <- rep(3, MC)
+  
+  # Generate MC uniform random numbers
+  sim_u <- runif(MC)
+  
+  # Assign values based on the uniform random numbers
+  for (i in 1:MC) {
+    if (sim_u[i] < 0.05) {
+      sim_disc[i] <- 0
+    } else if (sim_u[i] > 0.05 && sim_u[i] < 0.15) {
+      sim_disc[i] <- 1
+    } else if (sim_u[i] > 0.15 && sim_u[i] < 0.6) {
+      sim_disc[i] <- 2
+    }
+  }
+  
+  return(sim_disc)
+}
+
+sim_disc3_V1(10000)
+
+```
+## V2
+```{r}
+library(microbenchmark)
+
+
+sim_disc3_V2 <- function(MC) {
+  # Initialize a vector of length MC with default value 3
+  sim_disc <- rep(3, MC)
+  
+  # Generate MC uniform random numbers
+  sim_u <- runif(MC)
+  
+  # Assign values based on the uniform random numbers
+  for (i in 1:MC) {
+    if (sim_u[i] < 0.45) {
+      sim_disc[i] <- 2
+    } else if (sim_u[i] > 0.45 && sim_u[i] < 0.85) {
+      sim_disc[i] <- 3
+    } else if (sim_u[i] > 0.85 && sim_u[i] < 0.95) {
+      sim_disc[i] <- 1
+    }
+  }
+  
+  return(sim_disc)
+}
+
+sim_disc3_V2(10000)
+
+```
+## Compare Performance
+
+Comparing the two algorithms shows that the second version is more on average more efficient in terms of computiational cost. 
+```{r}
+results = microbenchmark(
+  v1 = sim_disc3_V1(10000),
+  v2 = sim_disc3_V2(10000),
+  times = 100
+)
+results
+```
+# Proof of the Acceptance-Rejection Method
+
+The *Acceptance-Rejection* method is used to generate samples from a probability distribution \( f(x) \) using a simpler proposal distribution \( g(x) \). The proof of its correctness shows that the accepted samples follow the target distribution.
+
+## *Assumptions*
+Let:
+•⁠  ⁠\( g(x) \) be a probability density function (PDF) from which we can easily sample.
+•⁠  ⁠There exists a constant \( c \) such that \( f(x) \leq c g(x) \) for all \( x \).
+•⁠  ⁠We generate a sample \( X \sim g(x) \) and accept it with probability:
+
+  \[
+  P(\text{accept } X) = \frac{f(X)}{c g(X)}
+  \]
+
+## *Proof*
+We show that the accepted samples follow the target distribution \( f(x) \).
+
+1.⁠ ⁠The probability of generating \( X \sim g(x) \) and accepting it is:
+
+   \[
+   P(\text{accept } X) = \frac{f(X)}{c g(X)}
+   \]
+
+2.⁠ ⁠The joint density of \( X \) and acceptance is:
+
+   \[
+   p_{\text{gen, accept}}(x) = g(x) \cdot \frac{f(x)}{c g(x)} = \frac{f(x)}{c}
+   \]
+
+3.⁠ ⁠The marginal probability of acceptance is:
+
+   \[
+   P(\text{accept}) = \int g(x) \frac{f(x)}{c g(x)} dx = \int \frac{f(x)}{c} dx = \frac{1}{c}
+   \]
+
+4.⁠ ⁠Given that \( X \) is accepted, the conditional density of \( X \) is:
+
+   \[
+   p_{\text{accepted}}(x) = \frac{p_{\text{gen, accept}}(x)}{P(\text{accept})} = \frac{\frac{f(x)}{c}}{1/c} = f(x)
+   \]
+
+Since the accepted samples follow the desired density \( f(x) \), the method correctly generates samples from \( f(x) \).
+
+
+# Student's t-Distribution as a Mixture of Normals
+
+The *Student's t-distribution* can be represented as a *mixture of normal distributions* with a *scaled inverse chi-squared* (or equivalently, an inverse gamma) distribution for the variance. This provides an intuitive Bayesian interpretation.
+
+## *Mixture Representation*
+A *Student’s t-distribution* \( t_\nu(0,1) \) (standardized with zero mean and unit variance) can be expressed as:
+
+\[
+X \mid \lambda \sim \mathcal{N}(0, \lambda)
+\]
+
+\[
+\lambda \sim \text{Inverse-Gamma} \left( \frac{\nu}{2}, \frac{\nu}{2} \right)
+\]
+
+where:
+•⁠  ⁠\( X \) is normally distributed given \( \lambda \), acting as a latent variance term.
+•⁠  ⁠\( \lambda \) follows an *inverse-gamma* distribution, which introduces heavier tails compared to a normal distribution.
+•⁠  ⁠\( \nu \) is the degrees of freedom of the t-distribution.
+
+## *Why Does This Work?*
+If you integrate out \( \lambda \), you recover the probability density function (PDF) of the *Student’s t-distribution*:
+
+\[
+f(x) = \frac{\Gamma\left(\frac{\nu+1}{2}\right)}{\sqrt{\nu \pi} \Gamma\left(\frac{\nu}{2}\right)} \left( 1 + \frac{x^2}{\nu} \right)^{-\frac{\nu+1}{2}}
+\]
+
+## *Key Intuition*
+•⁠  ⁠The Student's t-distribution can be seen as a *normal distribution with a random variance*.
+•⁠  ⁠For large \( \nu \), the variance becomes less variable, and the t-distribution approaches a normal distribution.
+•⁠  ⁠For small \( \nu \), the t-distribution has *heavier tails*, making it robust to outliers.
+
+This mixture representation is widely used in *Bayesian statistics*, where t-distributed priors can be represented as normal priors with an additional variance component following an inverse-gamma (or scaled inverse chi-squared) distribution.
+
