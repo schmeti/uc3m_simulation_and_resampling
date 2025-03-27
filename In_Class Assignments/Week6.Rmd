@@ -1,0 +1,119 @@
+---
+title: "Untitled"
+output: html_document
+date: "2025-03-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Simulation and Resampling: Week 6
+
+Marcos Álvarez Martín, Raúl Rodríguez García,
+
+
+## Bootstrapping with Rcpp
+
+```{r}
+
+# Load Rcpp code
+cpp_code <- 
+#include <Rcpp.h>
+using namespace Rcpp;
+
+// [[Rcpp::export]]
+List generate_permuted_samples(int n1, int s1, int n2, int s2) {
+  // Create original vectors
+  IntegerVector p1pre(n1, 0);
+  IntegerVector p2pre(n2, 0);
+  
+  std::fill_n(p1pre.begin(), s1, 1);
+  std::fill_n(p2pre.begin(), s2, 1);
+  
+  // Shuffle to create permuted samples
+  IntegerVector p1 = clone(p1pre);
+  IntegerVector p2 = clone(p2pre);
+  
+  std::random_shuffle(p1.begin(), p1.end());
+  std::random_shuffle(p2.begin(), p2.end());
+  
+  return List::create(Named("p1") = p1, Named("p2") = p2);
+}
+
+
+# Compile and load Rcpp code
+Rcpp::sourceCpp(code = cpp_code)
+```
+
+## Bootstrapping with Rcpp using Replicate
+
+
+```{r}
+# Load Rcpp code
+cpp_code <- '
+#include <Rcpp.h>
+using namespace Rcpp;
+
+// [[Rcpp::export]]
+List generate_permuted_samples(int n1, int s1, int n2, int s2) {
+  // Create original vectors
+  IntegerVector p1pre(n1, 0);
+  IntegerVector p2pre(n2, 0);
+  
+  std::fill_n(p1pre.begin(), s1, 1);
+  std::fill_n(p2pre.begin(), s2, 1);
+  
+  // Shuffle to create permuted samples
+  IntegerVector p1 = clone(p1pre);
+  IntegerVector p2 = clone(p2pre);
+  
+  std::random_shuffle(p1.begin(), p1.end());
+  std::random_shuffle(p2.begin(), p2.end());
+  
+  return List::create(Named("p1") = p1, Named("p2") = p2);
+}
+'
+
+# Compile and load Rcpp code
+Rcpp::sourceCpp(code = cpp_code)
+
+# Function to replicate the sampling process
+replicated_samples <- replicate(5, generate_permuted_samples(10, 4, 12, 6), simplify = FALSE)
+
+# Print the replicated results
+print(replicated_samples)
+
+```
+
+## Confidence Intervals based on Emperical Distribution
+
+```{r}
+# Load necessary libraries
+library(boot)
+
+# Load the aircondit dataset
+data(aircondit, package="boot")
+
+# Define a function to get ECDF value at a specific quantile (e.g., 50th percentile)
+ecdf_fn <- function(data, indices) {
+  sample_data <- data[indices]
+  ecdf_sample <- ecdf(sample_data)
+  return(ecdf_sample(50))  # ECDF value at 50th percentile
+}
+
+# Bootstrapping the ECDF for the aircondit$hours data
+set.seed(123)  # for reproducibility
+boot_result <- boot(data = aircondit$hours, statistic = ecdf_fn, R = 1000)
+
+# Confidence interval calculation for ECDF at the 50th percentile
+boot_ci <- boot.ci(boot_result, type = "basic")
+
+# Print confidence intervals
+print(boot_ci)
+
+
+```
+
+
+
